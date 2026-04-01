@@ -1,0 +1,154 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+  </PropertyGroup>
+
+  <!--
+  ═══════════════════════════════════════════════════════════════════
+  CALCULATOR WASM INTEGRATION
+  ───────────────────────────────────────────────────────────────────
+  This target publishes the Calculator.Wasm project and copies the
+  resulting static files to wwwroot/calculator/ so that the Server
+  app can load the Blazor WebAssembly runtime and activate the
+  <calc-ulator> custom element (see Components/App.razor).
+
+  The target is incremental: it only runs when Calculator.Wasm source
+  files are newer than the published output marker file.
+  ═══════════════════════════════════════════════════════════════════
+  -->
+  <Target Name="PublishCalculatorWasm"
+          BeforeTargets="Build"
+          Inputs="..\Calculator.Wasm\Calculator.Wasm.csproj;
+                  ..\Calculator.Wasm\Program.cs;
+                  ..\Calculator.Wasm\Components\Calculator.razor;
+                  ..\Calculator.Wasm\Components\Calculator.razor.css"
+          Outputs="$(MSBuildThisFileDirectory)wwwroot\calculator\_framework\blazor.webassembly.js">
+
+    <Message Importance="High" Text="▶ Publishing Calculator.Wasm custom element..." />
+
+    <!-- 1. Publish WASM project in Release mode.
+         The output directory is cleaned before each publish so that stale
+         fingerprinted files (e.g. dotnet.OLDHASH.js from a previous SDK) do not
+         accumulate alongside newly-published files — which would cause the
+         ItemGroup globs in step 4 to match multiple files and break the Copy task.
+         Release is always used (regardless of $(Configuration)) for two reasons:
+         - Debug builds include Microsoft.DotNet.HotReload.WebAssembly.Browser which
+           has a fingerprinted filename. Without it the WASM runtime can't start.
+         - Release produces smaller, self-contained output without dev-only modules. -->
+    <RemoveDir Directories="$(MSBuildThisFileDirectory)obj\wasm-publish" />
+    <Exec Command="dotnet publish &quot;$(MSBuildThisFileDirectory)..\Calculator.Wasm\Calculator.Wasm.csproj&quot; -c Release -o &quot;$(MSBuildThisFileDirectory)obj\wasm-publish&quot; --nologo -v quiet" />
+
+    <!-- 2. Collect the published static files — excluding pre-compressed variants.
+
+         WHY exclude .br and .gz?
+         MapStaticAssets() (the .NET 10 static asset endpoint system) automatically
+         discovers .br/.gz siblings of files in wwwroot/ and serves them with
+         Content-Encoding headers via content negotiation.  This breaks here because:
+           • Our stable-name copies (dotnet.js, blazor.webassembly.js, etc.) differ in
+             modification timestamp from the originals, so MapStaticAssets pairs the
+             wrong .gz/.br file with the wrong .js source → content length mismatch
+             → ERR_CONTENT_DECODING_FAILED in the browser.
+         By omitting .br/.gz, MapStaticAssets has nothing to pair and serves the plain
+         uncompressed files correctly.  ASP.NET Core's UseResponseCompression() (if
+         needed) can handle on-the-fly compression instead. -->
+    <ItemGroup>
+      <WasmStaticFiles Include="$(MSBuildThisFileDirectory)obj\wasm-publish\wwwroot\**\*"
+                       Exclude="$(MSBuildThisFileDirectory)obj\wasm-publish\wwwroot\**\*.br;
+                                $(MSBuildThisFileDirectory)obj\wasm-publish\wwwroot\**\*.gz" />
+    </ItemGroup>
+
+    <!-- 2b. Remove stale fingerprinted files left over from prior builds.
+         Without this, a re-publish that produces a new fingerprint leaves the old
+         file alongside the new one, causing the ItemGroup glob in step 4 to match
+         more than one file and breaking the 1-to-1 Copy task. -->
+    <ItemGroup>
+      <StaleFrameworkFiles Include="$(MSBuildThisFileDirectory)wwwroot\calculator\_framework\*" />
+    </ItemGroup>
+    <Delete Files="@(StaleFrameworkFiles)" Condition="'@(StaleFrameworkFiles)' != ''" />
+
+    <!-- 3. Copy all static files to wwwroot/calculator/ -->
+    <Copy SourceFiles="@(WasmStaticFiles)"
+          DestinationFiles="@(WasmStaticFiles->'$(MSBuildThisFileDirectory)wwwroot\calculator\%(RecursiveDir)%(Filename)%(Extension)')"
+          OverwriteReadOnlyFiles="true" />
+
+    <!--
+    4. Create stable-name copies of all fingerprinted framework JS files.
+
+       Context: blazor.webassembly.js internally does dynamic ES module imports
+       using stable names (e.g. import('./dotnet.js')). Normally the WASM
+       project's index.html provides an <script type="importmap"> that maps
+       these stable names to their fingerprinted equivalents. Since the Server
+       app does not (and cannot) include a second import map alongside its own,
+       we instead create stable-name copies of each fingerprinted file so the
+       browser can resolve the imports directly — no import map required.
+
+       File mapping from the WASM publish output:
+         blazor.webassembly.HASH.js  →  blazor.webassembly.js
+         dotnet.HASH.js              →  dotnet.js
+         dotnet.native.HASH.js       →  dotnet.native.js
+         dotnet.runtime.HASH.js      →  dotnet.runtime.js
+    -->
+    <PropertyGroup>
+      <WasmFrameworkDir>$(MSBuildThisFileDirectory)wwwroot\calculator\_framework\</WasmFrameworkDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <!-- blazor.webassembly.HASH.js -->
+      <FingerprintedBlazorJs Include="$(WasmFrameworkDir)blazor.webassembly.*.js"
+          Exclude="$(WasmFrameworkDir)*.br;$(WasmFrameworkDir)*.gz" />
+
+      <!-- dotnet.HASH.js  (exclude dotnet.native.* and dotnet.runtime.*) -->
+      <FingerprintedDotnetCoreJs Include="$(WasmFrameworkDir)dotnet.*.js"
+          Exclude="$(WasmFrameworkDir)dotnet.native.*;$(WasmFrameworkDir)dotnet.runtime.*;$(WasmFrameworkDir)*.br;$(WasmFrameworkDir)*.gz" />
+
+      <!-- dotnet.native.HASH.js -->
+      <FingerprintedDotnetNativeJs Include="$(WasmFrameworkDir)dotnet.native.*.js"
+          Exclude="$(WasmFrameworkDir)*.br;$(WasmFrameworkDir)*.gz" />
+
+      <!-- dotnet.runtime.HASH.js -->
+      <FingerprintedDotnetRuntimeJs Include="$(WasmFrameworkDir)dotnet.runtime.*.js"
+          Exclude="$(WasmFrameworkDir)*.br;$(WasmFrameworkDir)*.gz" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(FingerprintedBlazorJs)"
+          DestinationFiles="$(WasmFrameworkDir)blazor.webassembly.js"
+          OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="@(FingerprintedDotnetCoreJs)"
+          DestinationFiles="$(WasmFrameworkDir)dotnet.js"
+          OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="@(FingerprintedDotnetNativeJs)"
+          DestinationFiles="$(WasmFrameworkDir)dotnet.native.js"
+          OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="@(FingerprintedDotnetRuntimeJs)"
+          DestinationFiles="$(WasmFrameworkDir)dotnet.runtime.js"
+          OverwriteReadOnlyFiles="true" />
+
+    <!--
+    5. Copy _content/ to the Server's wwwroot/_content/ (at the document root).
+
+       Root cause of the 404 errors: dotnet.js resolves _content/ paths relative
+       to the document base URL (document.baseURI = "http://localhost:5142/"),
+       NOT relative to its own module URL. So even though the files exist at
+       /calculator/_content/..., the WASM runtime requests them from /_content/...
+
+       Fix: place the WASM-specific _content files at the document root so the
+       runtime can find them at /_content/... as expected.
+
+       Note: the Server project does not reference these packages directly, so
+       there is no conflict with its own _content entries.
+    -->
+    <ItemGroup>
+      <WasmContentFiles Include="$(MSBuildThisFileDirectory)obj\wasm-publish\wwwroot\_content\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(WasmContentFiles)"
+          DestinationFiles="@(WasmContentFiles->'$(MSBuildThisFileDirectory)wwwroot\_content\%(RecursiveDir)%(Filename)%(Extension)')"
+          OverwriteReadOnlyFiles="true" />
+
+    <Message Importance="High" Text="✔ Calculator.Wasm published → wwwroot\calculator\ + wwwroot\_content\" />
+  </Target>
+
+</Project>

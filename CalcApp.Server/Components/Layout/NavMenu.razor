@@ -1,0 +1,23 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">Blazor Custom Element Demo</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-calculator-fill-nav-menu" aria-hidden="true"></span> Calculator
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="integration">
+                <span class="bi bi-code-file-nav-menu" aria-hidden="true"></span> Integration Guide
+            </NavLink>
+        </div>
+    </nav>
+</div>
+

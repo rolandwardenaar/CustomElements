@@ -1,0 +1,260 @@
+@namespace Calculator.Wasm.Components
+
+<div class="calculator">
+    <div class="calc-header">
+        <span class="header-icon">&#9776;</span>
+        <span class="header-title">Standard</span>
+        <span class="header-icon">&#128336;</span>
+    </div>
+    <div class="display">
+        <div class="expression">@(_expression == "" ? "\u00a0" : _expression)</div>
+        <div class="current-value @DisplaySizeClass">@_display</div>
+    </div>
+    <div class="memory-row">
+        <button class="btn-memory" @onclick="MemoryClear" disabled="@(!_memoryHasValue)">MC</button>
+        <button class="btn-memory" @onclick="MemoryRecall" disabled="@(!_memoryHasValue)">MR</button>
+        <button class="btn-memory" @onclick="MemoryAdd">M+</button>
+        <button class="btn-memory" @onclick="MemorySubtract">M&#8722;</button>
+        <button class="btn-memory" @onclick="MemoryStore">MS</button>
+        <button class="btn-memory" @onclick="MemoryView" disabled="@(!_memoryHasValue)">M&#8964;</button>
+    </div>
+    <div class="buttons">
+        <button class="btn-function" @onclick="Percentage">%</button>
+        <button class="btn-function" @onclick="ClearEntry">CE</button>
+        <button class="btn-function" @onclick="Clear">C</button>
+        <button class="btn-function" @onclick="Backspace">&#9003;</button>
+
+        <button class="btn-function" @onclick="Reciprocal"><sup>1</sup>/<sub>x</sub></button>
+        <button class="btn-function" @onclick="Square">x&#178;</button>
+        <button class="btn-function" @onclick="SquareRoot">&#178;&#8730;x</button>
+        <button class="btn-operator" @onclick="() => Operate('÷')">÷</button>
+
+        <button class="btn-number" @onclick="() => Input('7')">7</button>
+        <button class="btn-number" @onclick="() => Input('8')">8</button>
+        <button class="btn-number" @onclick="() => Input('9')">9</button>
+        <button class="btn-operator" @onclick="() => Operate('×')">×</button>
+
+        <button class="btn-number" @onclick="() => Input('4')">4</button>
+        <button class="btn-number" @onclick="() => Input('5')">5</button>
+        <button class="btn-number" @onclick="() => Input('6')">6</button>
+        <button class="btn-operator" @onclick="() => Operate('−')">−</button>
+
+        <button class="btn-number" @onclick="() => Input('1')">1</button>
+        <button class="btn-number" @onclick="() => Input('2')">2</button>
+        <button class="btn-number" @onclick="() => Input('3')">3</button>
+        <button class="btn-operator" @onclick="() => Operate('+')">+</button>
+
+        <button class="btn-number" @onclick="ToggleSign">+/&#8722;</button>
+        <button class="btn-number" @onclick="() => Input('0')">0</button>
+        <button class="btn-number" @onclick="InputDecimal">.</button>
+        <button class="btn-equals" @onclick="Calculate">=</button>
+    </div>
+</div>
+
+@code {
+    private string _display = "0";
+    private string _expression = "";
+    private double _operand = 0;
+    private string _operator = "";
+    private bool _waitingForOperand = false;
+    private bool _justCalculated = false;
+    private double _memory = 0;
+    private bool _memoryHasValue = false;
+
+    private string DisplaySizeClass => _display.Length switch
+    {
+        <= 9  => "value-large",
+        <= 13 => "value-medium",
+        _     => "value-small"
+    };
+
+    private void Input(char digit)
+    {
+        if (_display == "Error") Clear();
+        if (_justCalculated || _waitingForOperand)
+        {
+            _display = digit.ToString();
+            _waitingForOperand = false;
+            _justCalculated = false;
+        }
+        else
+        {
+            _display = _display == "0" ? digit.ToString() : _display + digit;
+        }
+    }
+
+    private void InputDecimal()
+    {
+        if (_display == "Error") Clear();
+        if (_justCalculated || _waitingForOperand)
+        {
+            _display = "0.";
+            _waitingForOperand = false;
+            _justCalculated = false;
+            return;
+        }
+        if (!_display.Contains('.'))
+            _display += '.';
+    }
+
+    private void Operate(char op)
+    {
+        if (_display == "Error") return;
+        if (!double.TryParse(_display, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out double current)) return;
+
+        if (_operator != "" && !_waitingForOperand)
+        {
+            current = ApplyOperator(_operand, current, _operator);
+            _display = FormatNumber(current);
+        }
+
+        _expression = $"{FormatNumber(current)} {op}";
+        _operand = current;
+        _operator = op.ToString();
+        _waitingForOperand = true;
+        _justCalculated = false;
+    }
+
+    private void Calculate()
+    {
+        if (_display == "Error" || _operator == "" || _waitingForOperand) return;
+        if (!double.TryParse(_display, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out double current)) return;
+
+        double result = ApplyOperator(_operand, current, _operator);
+        _expression = $"{FormatNumber(_operand)} {_operator} {FormatNumber(current)} =";
+        _display = FormatNumber(result);
+        _operand = result;
+        _operator = "";
+        _waitingForOperand = false;
+        _justCalculated = true;
+    }
+
+    private void Clear()
+    {
+        _display = "0";
+        _expression = "";
+        _operand = 0;
+        _operator = "";
+        _waitingForOperand = false;
+        _justCalculated = false;
+    }
+
+    private void ClearEntry()
+    {
+        _display = "0";
+        _justCalculated = false;
+    }
+
+    private void Backspace()
+    {
+        if (_display == "Error") { Clear(); return; }
+        if (_justCalculated) { _display = "0"; _justCalculated = false; return; }
+        _display = _display.Length > 1 ? _display[..^1] : "0";
+        if (_display == "-") _display = "0";
+    }
+
+    private void ToggleSign()
+    {
+        if (_display == "Error") return;
+        if (double.TryParse(_display, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out double val))
+            _display = FormatNumber(-val);
+    }
+
+    private void Percentage()
+    {
+        if (_display == "Error") return;
+        if (!double.TryParse(_display, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out double val)) return;
+        _display = FormatNumber(_operator != "" ? _operand * val / 100.0 : val / 100.0);
+        _justCalculated = true;
+    }
+
+    private void Reciprocal()
+    {
+        if (_display == "Error") return;
+        if (!double.TryParse(_display, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out double val)) return;
+        if (val == 0) { _display = "Error"; return; }
+        _expression = $"1/({FormatNumber(val)})";
+        _display = FormatNumber(1.0 / val);
+        _justCalculated = true;
+    }
+
+    private void Square()
+    {
+        if (_display == "Error") return;
+        if (!double.TryParse(_display, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out double val)) return;
+        _expression = $"sqr({FormatNumber(val)})";
+        _display = FormatNumber(val * val);
+        _justCalculated = true;
+    }
+
+    private void SquareRoot()
+    {
+        if (_display == "Error") return;
+        if (!double.TryParse(_display, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out double val)) return;
+        if (val < 0) { _display = "Error"; return; }
+        _expression = $"\u221a({FormatNumber(val)})";
+        _display = FormatNumber(Math.Sqrt(val));
+        _justCalculated = true;
+    }
+
+    private void MemoryClear() { _memory = 0; _memoryHasValue = false; }
+
+    private void MemoryRecall()
+    {
+        _display = FormatNumber(_memory);
+        _waitingForOperand = false;
+        _justCalculated = true;
+    }
+
+    private void MemoryAdd()
+    {
+        if (double.TryParse(_display, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out double val))
+        { _memory += val; _memoryHasValue = true; }
+    }
+
+    private void MemorySubtract()
+    {
+        if (double.TryParse(_display, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out double val))
+        { _memory -= val; _memoryHasValue = true; }
+    }
+
+    private void MemoryStore()
+    {
+        if (double.TryParse(_display, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out double val))
+        { _memory = val; _memoryHasValue = true; }
+    }
+
+    private void MemoryView()
+    {
+        _display = FormatNumber(_memory);
+        _waitingForOperand = false;
+        _justCalculated = true;
+    }
+
+    private static double ApplyOperator(double a, double b, string op) => op switch
+    {
+        "+" => a + b,
+        "−" => a - b,
+        "×" => a * b,
+        "÷" => b != 0 ? a / b : double.NaN,
+        _ => b
+    };
+
+    private static string FormatNumber(double n)
+    {
+        if (double.IsNaN(n) || double.IsInfinity(n))
+            return "Error";
+        string result = n.ToString("G12", System.Globalization.CultureInfo.InvariantCulture);
+        return result.Length > 14 ? n.ToString("G10", System.Globalization.CultureInfo.InvariantCulture) : result;
+    }
+}

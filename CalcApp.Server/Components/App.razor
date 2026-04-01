@@ -1,0 +1,57 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <ResourcePreloader />
+
+    <!--
+    ═══════════════════════════════════════════════════════════════
+    Fonts used by the <calc-ulator> custom element
+    ═══════════════════════════════════════════════════════════════
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link rel="stylesheet" href="@Assets["CalcApp.Server.styles.css"]" />
+    <!-- Scoped component styles from the Calculator.Wasm bundle -->
+    <link rel="stylesheet" href="calculator/Calculator.Wasm.styles.css" />
+    <ImportMap />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <HeadOutlet />
+</head>
+
+<body>
+    <Routes />
+    <ReconnectModal />
+
+    <!-- Blazor Server runtime -->
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+
+    <!--
+    ═══════════════════════════════════════════════════════════════
+    CALCULATOR WASM INTEGRATION
+    ───────────────────────────────────────────────────────────────
+    This script loads the Blazor WebAssembly runtime from the
+    published Calculator.Wasm bundle (wwwroot/calculator/).
+
+    The WASM runtime registers <calc-ulator> as a Web Custom
+    Element.  Once this script is loaded and the WASM runtime has
+    started, any <calc-ulator> tag on the page becomes a fully
+    functional, self-contained Blazor component running in the
+    browser — without any Blazor Server circuit involvement.
+
+    The stable file name (blazor.webassembly.js) is produced by
+    the PublishCalculatorWasm MSBuild target in CalcApp.Server.csproj
+    which also copies the fingerprinted file to this stable path.
+    ═══════════════════════════════════════════════════════════════
+    -->
+    <script src="calculator/_framework/blazor.webassembly.js"></script>
+</body>
+
+</html>

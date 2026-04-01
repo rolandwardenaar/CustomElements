@@ -1,0 +1,348 @@
+@page "/integration"
+
+<PageTitle>Custom Element Integration Guide</PageTitle>
+
+<div class="guide">
+
+    <div class="guide-hero">
+        <div class="guide-hero-label">Blazor WebAssembly · Custom Elements</div>
+        <h1>Building &amp; Integrating<br />Blazor Custom Elements</h1>
+        <p>
+            A step-by-step guide to turning a Blazor component into a reusable
+            HTML custom element and embedding it on any website — exactly as done
+            in this solution.
+        </p>
+    </div>
+
+    <div class="guide-body">
+
+        <!-- ─── What is it? ─── -->
+        <section class="guide-section">
+            <h2>What is a Blazor Custom Element?</h2>
+            <p>
+                The <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements"
+                       target="_blank" rel="noopener">Custom Elements API</a> lets you define your own HTML tags.
+                Blazor's <code>RegisterCustomElement&lt;T&gt;</code> wires a Blazor WebAssembly component to
+                one of those tags. Once registered, <code>&lt;calc-ulator&gt;</code> works like a native browser
+                element and can be dropped into <em>any</em> HTML page — React, Vue, plain HTML, or
+                Blazor Server — without any Blazor dependency on the host side.
+            </p>
+            <div class="info-cards">
+                <div class="info-card">
+                    <div class="info-card-icon">🧩</div>
+                    <div>
+                        <strong>Framework-agnostic</strong>
+                        <p>Use the tag in any HTML page or JavaScript framework — no Blazor SDK on the host required.</p>
+                    </div>
+                </div>
+                <div class="info-card">
+                    <div class="info-card-icon">⚡</div>
+                    <div>
+                        <strong>Runs in the browser</strong>
+                        <p>Component logic executes 100% client-side via WebAssembly — no server round-trips.</p>
+                    </div>
+                </div>
+                <div class="info-card">
+                    <div class="info-card-icon">📦</div>
+                    <div>
+                        <strong>Self-contained bundle</strong>
+                        <p>The WASM output includes the .NET runtime, your component, and all dependencies.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── Architecture ─── -->
+        <section class="guide-section">
+            <h2>Architecture of This Solution</h2>
+            <div class="arch-diagram">
+                <div class="arch-box arch-server">
+                    <div class="arch-title">CalcApp.Server</div>
+                    <div class="arch-badge">Blazor Server</div>
+                    <ul>
+                        <li>Handles routing &amp; server-side rendering</li>
+                        <li>Embeds <code>&lt;calc-ulator&gt;</code> on <code>Home.razor</code></li>
+                        <li>Serves WASM files from <code>wwwroot/calculator/</code></li>
+                        <li>Configures MIME types for <code>.dat</code> / <code>.wasm</code></li>
+                    </ul>
+                </div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-box arch-wasm">
+                    <div class="arch-title">Calculator.Wasm</div>
+                    <div class="arch-badge">Blazor WebAssembly</div>
+                    <ul>
+                        <li><code>Calculator.razor</code> component</li>
+                        <li>Registered as <code>&lt;calc-ulator&gt;</code></li>
+                        <li>Published via MSBuild into Server's <code>wwwroot</code></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── Steps ─── -->
+        <section class="guide-section">
+            <h2>Step by Step</h2>
+
+            <!-- Step 1 -->
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <h3>Create a Blazor WebAssembly standalone project</h3>
+                    <p>Create a regular Blazor WASM project. This becomes the component library. The
+                       <code>Microsoft.AspNetCore.Components.CustomElements</code> package is included
+                       by default from .NET 7 onwards.</p>
+                    <pre class="code-block"><code>dotnet new blazorwasm -n Calculator.Wasm --no-https</code></pre>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <h3>Register the component as a custom element</h3>
+                    <p>In <code>Program.cs</code> of the WASM project, use
+                       <code>RegisterCustomElement</code> instead of the standard root component
+                       registration. Pass the HTML tag name you want the component to respond to:</p>
+                    <pre class="code-block"><code>// Program.cs (Calculator.Wasm)
+var builder = WebAssemblyHostBuilder.CreateDefault(args);
+
+// Remove this:
+//   builder.RootComponents.Add&lt;App&gt;("#app");
+
+// Add this instead:
+builder.RootComponents
+       .RegisterCustomElement&lt;Calculator&gt;("calc-ulator");
+
+await builder.Build().RunAsync();</code></pre>
+                    <div class="guide-note">
+                        Custom element names <strong>must contain a hyphen</strong> (e.g.
+                        <code>calc-ulator</code>, not <code>calculator</code>). This is enforced
+                        by the browser to distinguish custom elements from native HTML elements.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                    <h3>Publish and copy the WASM bundle into the host project</h3>
+                    <p>Add an MSBuild target to the host's <code>.csproj</code> that publishes
+                       Calculator.Wasm and copies its output to <code>wwwroot/calculator/</code>.
+                       Key decisions made in this solution:</p>
+                    <ul>
+                        <li>
+                            <strong>Always publish in Release mode.</strong> Debug builds include
+                            <code>Microsoft.DotNet.HotReload.WebAssembly.Browser</code> with a
+                            fingerprinted filename that the WASM bootstrap cannot locate without a
+                            matching import map entry.
+                        </li>
+                        <li>
+                            <strong>Exclude <code>.br</code> / <code>.gz</code> variants.</strong>
+                            The host's <code>MapStaticAssets()</code> discovers pre-compressed
+                            siblings and serves them via content negotiation. Because our copied
+                            files differ in file metadata from the originals, the middleware can
+                            pair the wrong file with the wrong encoding, causing
+                            <code>ERR_CONTENT_DECODING_FAILED</code> in the browser.
+                        </li>
+                        <li>
+                            <strong>Clean the publish output directory first.</strong> Without a
+                            clean, stale fingerprinted files (e.g. <code>dotnet.OLDHASH.js</code>
+                            from a previous SDK version) accumulate alongside the new ones. MSBuild's
+                            Copy task then fails because its 1-to-1 DestinationFiles mapping sees
+                            multiple source files.
+                        </li>
+                        <li>
+                            <strong>Create stable-name copies of fingerprinted JS files.</strong>
+                            <code>blazor.webassembly.js</code> internally does dynamic
+                            <code>import('./dotnet.js')</code> calls using stable (non-fingerprinted)
+                            names. The WASM project's own <code>index.html</code> provides an
+                            <code>&lt;importmap&gt;</code> to resolve these — but a host page cannot
+                            have a second import map. The workaround is to copy
+                            <code>dotnet.HASH.js → dotnet.js</code> etc. so the browser can resolve
+                            the imports directly without a map.
+                        </li>
+                    </ul>
+                    <pre class="code-block"><code>&lt;!-- In CalcApp.Server.csproj --&gt;
+&lt;Target Name="PublishCalculatorWasm" BeforeTargets="Build"
+        Inputs="..\Calculator.Wasm\Calculator.Wasm.csproj;..."
+        Outputs="wwwroot\calculator\_framework\blazor.webassembly.js"&gt;
+
+  &lt;!-- 1. Clean stale output to prevent fingerprint accumulation --&gt;
+  &lt;RemoveDir Directories="obj\wasm-publish" /&gt;
+
+  &lt;!-- 2. Publish in Release mode --&gt;
+  &lt;Exec Command="dotnet publish ..\Calculator.Wasm\Calculator.Wasm.csproj
+      -c Release -o obj\wasm-publish --nologo -v quiet" /&gt;
+
+  &lt;!-- 3. Collect files, excluding pre-compressed variants --&gt;
+  &lt;ItemGroup&gt;
+    &lt;WasmFiles Include="obj\wasm-publish\wwwroot\**\*"
+               Exclude="obj\wasm-publish\wwwroot\**\*.br;
+                        obj\wasm-publish\wwwroot\**\*.gz" /&gt;
+  &lt;/ItemGroup&gt;
+
+  &lt;!-- 4. Copy to wwwroot/calculator/ --&gt;
+  &lt;Copy SourceFiles="@@(WasmFiles)"
+        DestinationFiles="@@(WasmFiles-&gt;
+          'wwwroot\calculator\%(RecursiveDir)%(Filename)%(Extension)')"
+        OverwriteReadOnlyFiles="true" /&gt;
+
+  &lt;!-- 5. Create stable-name copies of fingerprinted JS files --&gt;
+  &lt;Copy SourceFiles="@@(FingerprintedDotnetCoreJs)"
+        DestinationFiles="wwwroot\calculator\_framework\dotnet.js" /&gt;
+  &lt;Copy SourceFiles="@@(FingerprintedDotnetNativeJs)"
+        DestinationFiles="wwwroot\calculator\_framework\dotnet.native.js" /&gt;
+  &lt;Copy SourceFiles="@@(FingerprintedDotnetRuntimeJs)"
+        DestinationFiles="wwwroot\calculator\_framework\dotnet.runtime.js" /&gt;
+  &lt;Copy SourceFiles="@@(FingerprintedBlazorJs)"
+        DestinationFiles="wwwroot\calculator\_framework\blazor.webassembly.js" /&gt;
+
+&lt;/Target&gt;</code></pre>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                    <h3>Configure static file MIME types in the host</h3>
+                    <p>
+                        ASP.NET Core's static file middleware returns <strong>404</strong> for
+                        file types it doesn't recognize — even if the file exists. The WASM runtime
+                        fetches <code>.dat</code> files (ICU globalization data) and <code>.wasm</code>
+                        files (.NET assemblies). Register MIME type mappings before
+                        <code>UseStaticFiles</code>:
+                    </p>
+                    <pre class="code-block"><code>// Program.cs (CalcApp.Server)
+var provider = new FileExtensionContentTypeProvider();
+provider.Mappings[".dat"]  = "application/octet-stream"; // ICU data
+provider.Mappings[".wasm"] = "application/wasm";         // .NET assemblies
+provider.Mappings[".blat"] = "application/octet-stream"; // lazy-load table
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = provider
+});</code></pre>
+                </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="step">
+                <div class="step-num">5</div>
+                <div class="step-body">
+                    <h3>Load the WASM runtime and scoped CSS in the host page</h3>
+                    <p>Add two tags to the host's layout (<code>App.razor</code> or
+                       <code>_Layout.cshtml</code>). The stylesheet must come before the script:</p>
+                    <pre class="code-block"><code>&lt;!-- Blazor scoped CSS for Calculator.Wasm components --&gt;
+&lt;link rel="stylesheet" href="calculator/Calculator.Wasm.styles.css" /&gt;
+
+&lt;!-- Bootstrap the Blazor WASM runtime (stable-name copy) --&gt;
+&lt;script src="calculator/_framework/blazor.webassembly.js"&gt;&lt;/script&gt;</code></pre>
+                    <div class="guide-note">
+                        The <code>styles.css</code> link is easy to overlook. Without it, all
+                        <strong>Blazor-scoped CSS</strong> (the styles defined in
+                        <code>Calculator.razor.css</code>) is silently ignored and the component
+                        renders without any of its intended styles.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 6 -->
+            <div class="step">
+                <div class="step-num">6</div>
+                <div class="step-body">
+                    <h3>Use the custom element on any page</h3>
+                    <p>
+                        Once the script is loaded the WASM runtime starts (once, regardless of
+                        how many instances are on the page) and hydrates every
+                        <code>&lt;calc-ulator&gt;</code> it finds in the DOM:
+                    </p>
+                    <pre class="code-block"><code>&lt;!-- Razor, HTML, React JSX, Vue template — anywhere --&gt;
+&lt;calc-ulator&gt;&lt;/calc-ulator&gt;</code></pre>
+                    <p>
+                        Multiple instances on the same page are fully supported. Each runs its
+                        own independent Blazor component instance.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── Gotchas ─── -->
+        <section class="guide-section">
+            <h2>Important Gotchas</h2>
+
+            <div class="gotchas">
+                <div class="gotcha">
+                    <div class="gotcha-title">Custom elements are inline by default</div>
+                    <p>
+                        Unknown HTML elements default to <code>display: inline</code>. This prevents
+                        fixed widths and CSS grid layouts inside the component from working correctly.
+                        Add one rule to your global stylesheet:
+                    </p>
+                    <pre class="code-block"><code>calc-ulator { display: block; }</code></pre>
+                </div>
+
+                <div class="gotcha">
+                    <div class="gotcha-title">The host page's &lt;base href&gt; controls all asset URLs</div>
+                    <p>
+                        The WASM runtime resolves framework files, ICU data, and .NET assemblies
+                        relative to <code>document.baseURI</code> — <em>not</em> relative to the
+                        script's own URL. Keep <code>&lt;base href="/"&gt;</code> on the host page and
+                        ensure all WASM files are reachable from the root path.
+                    </p>
+                    <p>
+                        Do <strong>not</strong> point <code>&lt;base href&gt;</code> at
+                        <code>/calculator/</code> — that would break the host app's own routing.
+                    </p>
+                </div>
+
+                <div class="gotcha">
+                    <div class="gotcha-title">_content/ assets must also live at the document root</div>
+                    <p>
+                        If the WASM component depends on a Razor Class Library (which publishes
+                        static assets to <code>_content/LibraryName/</code>), the WASM runtime
+                        requests them relative to the document base URL — so
+                        <code>/_content/MyLib/file.js</code>, not
+                        <code>/calculator/_content/MyLib/file.js</code>.
+                    </p>
+                    <p>
+                        The MSBuild target in this solution handles this by copying the WASM
+                        project's <code>_content/</code> folder into the host's
+                        <code>wwwroot/_content/</code>.
+                    </p>
+                </div>
+
+                <div class="gotcha">
+                    <div class="gotcha-title">A host page cannot have two import maps</div>
+                    <p>
+                        Blazor's boot script uses <code>import('./dotnet.js')</code> with stable
+                        (non-fingerprinted) names. The WASM project's own <code>index.html</code>
+                        provides an <code>&lt;script type="importmap"&gt;</code> to map these to the
+                        fingerprinted filenames — but a browser only accepts <em>one</em> import map
+                        per page, and the host app already has one.
+                    </p>
+                    <p>
+                        Workaround used here: create stable-name copies of the fingerprinted files
+                        (<code>dotnet.HASH.js → dotnet.js</code>) so the import resolves directly
+                        without any map entry.
+                    </p>
+                </div>
+
+                <div class="gotcha">
+                    <div class="gotcha-title">Don't copy pre-compressed (.br / .gz) files to wwwroot</div>
+                    <p>
+                        <code>MapStaticAssets()</code> auto-discovers <code>.br</code> and
+                        <code>.gz</code> siblings in <code>wwwroot/</code> and serves them via HTTP
+                        content negotiation. If the copied variants have different metadata than
+                        what <code>MapStaticAssets</code> expects, it can serve the wrong compressed
+                        file for a given content file, resulting in
+                        <code>ERR_CONTENT_DECODING_FAILED</code>.
+                        Copy only the uncompressed files; let the server compress on the fly if needed.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+</div>

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="CalcApp.Server/CalcApp.Server.csproj" />
+  <Project Path="Calculator.Wasm/Calculator.Wasm.csproj" />
+</Solution>

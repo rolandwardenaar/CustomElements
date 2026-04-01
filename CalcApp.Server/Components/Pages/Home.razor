@@ -1,0 +1,32 @@
+﻿@page "/"
+
+<PageTitle>Calculator</PageTitle>
+
+<div class="calc-page">
+    <header class="calc-header">
+        <h1>Blazor Custom Element Demo</h1>
+        <p>
+            The calculator below is a <strong>Blazor WebAssembly component</strong> running
+            entirely in the browser. It is embedded on this Blazor Server page as a
+            native HTML custom element — no Blazor Server circuit is involved in its logic.
+        </p>
+        <p class="tag-hint">
+            Source tag: <code>&lt;calc-ulator&gt;&lt;/calc-ulator&gt;</code>
+        </p>
+    </header>
+
+    <!--
+        ┌─────────────────────────────────────────────────────────────────┐
+        │  <calc-ulator> is a Web Custom Element registered by the        │
+        │  Calculator.Wasm Blazor WebAssembly project.                    │
+        │                                                                 │
+        │  Registration (Calculator.Wasm/Program.cs):                     │
+        │    builder.RootComponents                                        │
+        │           .RegisterCustomElement<Calculator>("calc-ulator");     │
+        │                                                                 │
+        │  The WASM runtime is loaded via the script tag in App.razor:    │
+        │    <script src="calculator/_framework/blazor.webassembly.js">   │
+        └─────────────────────────────────────────────────────────────────┘
+    -->
+    <calc-ulator></calc-ulator>
+</div>

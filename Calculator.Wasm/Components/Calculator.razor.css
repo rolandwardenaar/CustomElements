@@ -1,0 +1,223 @@
+/* ─────────────────────────────────────────────
+   Calculator Custom Element — Windows 11 Fluent
+   Design style. Scoped via Blazor CSS isolation.
+───────────────────────────────────────────── */
+
+.calculator {
+    font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #F3F3F3;
+    border-radius: 8px;
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.12),
+        0 8px 32px rgba(0, 0, 0, 0.10);
+    overflow: hidden;
+    width: 320px;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ── Header ── */
+
+.calc-header {
+    background: #1B2733;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+}
+
+.header-icon {
+    color: rgba(255, 255, 255, 0.80);
+    font-size: 15px;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.1s;
+}
+
+.header-icon:hover {
+    background: rgba(255, 255, 255, 0.10);
+}
+
+.header-title {
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 600;
+    flex: 1;
+}
+
+/* ── Display ── */
+
+.display {
+    background: #F3F3F3;
+    padding: 8px 16px 10px;
+    min-height: 88px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-end;
+}
+
+.expression {
+    font-size: 12px;
+    font-weight: 400;
+    color: #6B6B6B;
+    min-height: 18px;
+    text-align: right;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.current-value {
+    font-weight: 300;
+    color: #000000;
+    text-align: right;
+    line-height: 1.1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+    transition: font-size 0.1s ease;
+}
+
+.value-large  { font-size: 48px; }
+.value-medium { font-size: 34px; }
+.value-small  { font-size: 22px; }
+
+/* ── Memory row ── */
+
+.memory-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    background: #F3F3F3;
+    padding: 4px 8px;
+    gap: 2px;
+    border-bottom: 1px solid #E0E0E0;
+}
+
+.btn-memory {
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    color: #1B1B1B;
+    height: 32px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.08s;
+    padding: 0;
+}
+
+.btn-memory:hover:not(:disabled) {
+    background: #E0E0E0;
+}
+
+.btn-memory:active:not(:disabled) {
+    background: #D0D0D0;
+}
+
+.btn-memory:disabled {
+    color: #AAAAAA;
+    cursor: default;
+}
+
+/* ── Button Grid ── */
+
+.buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: #E0E0E0;
+}
+
+button {
+    border: none;
+    margin: 0;
+    padding: 0;
+    height: 52px;
+    font-size: 15px;
+    font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+    font-weight: 400;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.05s;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Number buttons ── */
+
+.btn-number {
+    background: #FFFFFF;
+    color: #1B1B1B;
+    font-size: 16px;
+}
+
+.btn-number:hover {
+    background: #F5F5F5;
+}
+
+.btn-number:active {
+    background: #E8E8E8;
+}
+
+/* ── Function buttons (%, CE, C, ⌫, 1/x, x², √x) ── */
+
+.btn-function {
+    background: #F3F3F3;
+    color: #1B1B1B;
+    font-size: 14px;
+}
+
+.btn-function:hover {
+    background: #EBEBEB;
+}
+
+.btn-function:active {
+    background: #DEDEDE;
+}
+
+/* ── Operator buttons (÷ × − +) ── */
+
+.btn-operator {
+    background: #F3F3F3;
+    color: #1B1B1B;
+    font-size: 18px;
+}
+
+.btn-operator:hover {
+    background: #EBEBEB;
+}
+
+.btn-operator:active {
+    background: #DEDEDE;
+}
+
+/* ── Equals button ── */
+
+.btn-equals {
+    background: #0067C0;
+    color: #FFFFFF;
+    font-size: 20px;
+}
+
+.btn-equals:hover {
+    background: #1A74C4;
+}
+
+.btn-equals:active {
+    background: #005BA5;
+}
