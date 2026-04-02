@@ -94,12 +94,11 @@ const BezierCurveTo = new protobuf.Type('BezierCurveTo')
 drawingNs.add(BezierCurveTo);
 
 // ── DrawCommand (oneof) ────────────────────────────────────────
+// IMPORTANT: Fields must be added BEFORE the OneOf so that
+// OneOf.onAdd() can resolve the field names and link them.
+// Without this ordering, oneof.fieldsArray stays empty and the
+// 'command' discriminator in toObject({ oneofs: true }) is always undefined.
 const DrawCommand = new protobuf.Type('DrawCommand')
-  .add(new protobuf.OneOf('command', [
-    'setColor', 'moveTo', 'lineTo', 'fillRect', 'arc',
-    'beginPath', 'closePath', 'fill', 'stroke', 'setLineWidth',
-    'clearCanvas', 'quadraticCurveTo', 'bezierCurveTo', 'setStrokeColor',
-  ]))
   .add(new protobuf.Field('setColor', 1, 'SetColor'))
   .add(new protobuf.Field('moveTo', 2, 'MoveTo'))
   .add(new protobuf.Field('lineTo', 3, 'LineTo'))
@@ -113,7 +112,12 @@ const DrawCommand = new protobuf.Type('DrawCommand')
   .add(new protobuf.Field('clearCanvas', 11, 'ClearCanvas'))
   .add(new protobuf.Field('quadraticCurveTo', 12, 'QuadraticCurveTo'))
   .add(new protobuf.Field('bezierCurveTo', 13, 'BezierCurveTo'))
-  .add(new protobuf.Field('setStrokeColor', 14, 'SetStrokeColor'));
+  .add(new protobuf.Field('setStrokeColor', 14, 'SetStrokeColor'))
+  .add(new protobuf.OneOf('command', [
+    'setColor', 'moveTo', 'lineTo', 'fillRect', 'arc',
+    'beginPath', 'closePath', 'fill', 'stroke', 'setLineWidth',
+    'clearCanvas', 'quadraticCurveTo', 'bezierCurveTo', 'setStrokeColor',
+  ]));
 drawingNs.add(DrawCommand);
 
 // ── Exports ────────────────────────────────────────────────────
