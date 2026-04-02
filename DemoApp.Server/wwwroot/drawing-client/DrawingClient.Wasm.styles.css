@@ -1,6 +1,6 @@
 /* /Components/DrawingCanvas.razor.rz.scp.css */
 .drawing-canvas-container[b-ntaaz3rji1] {
-    display: inline-flex;
+    display: flex;
     flex-direction: column;
     gap: 0.5rem;
     font-family: 'Segoe UI', system-ui, sans-serif;
@@ -10,6 +10,8 @@ canvas[b-ntaaz3rji1] {
     border: 2px solid #333;
     border-radius: 8px;
     background: #f0f8ff;
+    max-width: 100%;
+    height: auto;
 }
 
 .drawing-controls[b-ntaaz3rji1] {
