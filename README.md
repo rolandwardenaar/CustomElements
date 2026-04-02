@@ -1,8 +1,11 @@
-# Blazor Custom Elements — Demo Solution
+﻿# Blazor Custom Elements — Demo Solution
 
-A working reference implementation showing how to build a **Blazor WebAssembly component**, expose it as a native HTML **Custom Element**, and embed it inside a **Blazor Server** application — all in a single .NET 10 solution.
+A working reference implementation showing how to build **Web Custom Elements** using two different approaches — **Blazor WebAssembly** and **Vue.js** — and embed them inside **Blazor Server** applications. All in a single .NET 10 solution orchestrated by **.NET Aspire**.
 
-The result: a Windows 11–style calculator rendered by a `<calc-ulator>` tag on a Blazor Server page, with the component logic running entirely in the browser via WebAssembly.
+The solution contains two demos:
+
+1. **Calculator** — A Windows 11–style calculator rendered by a `<calc-ulator>` tag, with the component logic running entirely in the browser via Blazor WebAssembly.
+2. **gRPC Drawing Canvas** — A side-by-side comparison of a **Blazor WASM** (`<dotnet-grpc-client>`) and a **Vue.js** (`<vuejs-grpc-client>`) custom element, both streaming drawing commands from a shared **gRPC server** and rendering them on an HTML5 Canvas in real time.
 
 ---
 
@@ -11,11 +14,19 @@ The result: a Windows 11–style calculator rendered by a `<calc-ulator>` tag on
 | Project | Type | Purpose |
 |---------|------|---------|
 | `Calculator.Wasm` | Blazor WebAssembly | The calculator component and custom element registration |
-| `CalcApp.Server` | Blazor Server (ASP.NET Core) | Host application that embeds the custom element |
+| `CalcApp.Server` | Blazor Server (ASP.NET Core) | Host application that embeds the calculator custom element |
+| `DrawingClient.Wasm` | Blazor WebAssembly | Drawing canvas component exposed as `<dotnet-grpc-client>` custom element |
+| `drawing-client-vue` | Vue.js 3 + TypeScript | Drawing canvas component exposed as `<vuejs-grpc-client>` custom element |
+| `DrawingService.Grpc` | ASP.NET Core gRPC | gRPC server that streams Canvas 2D draw commands for named scenes |
+| `DemoApp.Server` | Blazor Server (ASP.NET Core) | Host application that embeds both drawing custom elements side-by-side |
+| `CustomElements.AppHost` | .NET Aspire AppHost | Orchestrates all services for local development |
+| `CustomElements.ServiceDefaults` | Shared library | Common Aspire service defaults (health checks, telemetry) |
 
 ---
 
 ## Quick Start
+
+### Calculator demo (standalone)
 
 ```bash
 git clone https://github.com/rolandwardenaar/CustomElements.git
@@ -25,11 +36,19 @@ dotnet run --project CalcApp.Server
 
 Then open `http://localhost:5142`.
 
-> **Prerequisites:** [.NET 10 SDK](https://dotnet.microsoft.com/download)
+### Drawing demo (via Aspire)
+
+```bash
+dotnet run --project CustomElements.AppHost
+```
+
+The Aspire dashboard opens automatically and shows all services. The demo app is available at the `demo-app` endpoint. The gRPC drawing service and the demo host start together — no manual setup needed.
+
+> **Prerequisites:** [.NET 10 SDK](https://dotnet.microsoft.com/download), [Node.js](https://nodejs.org/) (for the Vue.js client build)
 
 ---
 
-## How It Works
+## How It Works — Calculator (`<calc-ulator>`)
 
 ### 1. Register the component as a Custom Element
 
@@ -93,10 +112,185 @@ Without it, fixed widths and CSS grid layouts inside the component don't work co
 
 ---
 
+## How It Works — Drawing Canvas (`<dotnet-grpc-client>` & `<vuejs-grpc-client>`)
+
+The drawing demo shows how the same **gRPC server** can feed two completely different front-end technologies — **Blazor WebAssembly** and **Vue.js** — via gRPC-Web server streaming. Both clients receive identical draw commands and render them on an HTML5 Canvas in real time.
+
+### Architecture
+
+```
+┌──────────────────────┐
+│  DrawingService.Grpc │   ASP.NET Core gRPC server
+│  (gRPC-Web enabled)  │   Streams Canvas 2D draw commands
+└──────────┬───────────┘
+           │  gRPC-Web (HTTP/1.1)
+     ┌─────┴─────┐
+     ▼           ▼
+┌──────────┐ ┌──────────┐
+│  Blazor  │ │  Vue.js  │   Both run in the browser
+│   WASM   │ │  (IIFE)  │   as Web Custom Elements
+└──────────┘ └──────────┘
+```
+
+### gRPC service & proto contract
+
+A shared `protos/drawing.proto` defines the service contract:
+
+```protobuf
+service DrawingCanvas {
+  rpc StreamScene (SceneRequest) returns (stream DrawCommand);
+  rpc GetAvailableScenes (Empty) returns (SceneList);
+}
+```
+
+Each `DrawCommand` is a `oneof` containing a single Canvas 2D operation (`setColor`, `fillRect`, `arc`, `lineTo`, etc.). The server has pluggable **scene renderers** (tree, house, cloud, sun, car, landscape) that each produce a sequence of draw commands.
+
+### Blazor WASM client (`DrawingClient.Wasm`)
+
+Registered as `<dotnet-grpc-client>` via:
+
+```csharp
+builder.RootComponents.RegisterCustomElement<DrawingCanvasComponent>("dotnet-grpc-client");
+```
+
+Uses `Grpc.Net.Client.Web` (gRPC-Web handler) for browser-compatible gRPC calls. Draw commands are streamed with `ReadAllAsync()`, batched for performance, and forwarded to the Canvas via JS Interop.
+
+### Vue.js client (`drawing-client-vue`)
+
+Registered as `<vuejs-grpc-client>` using Vue 3's `defineCustomElement`:
+
+```typescript
+import { defineCustomElement } from 'vue';
+import DrawingCanvas from './components/DrawingCanvas.ce.vue';
+
+const DrawingCanvasElement = defineCustomElement(DrawingCanvas);
+customElements.define('vuejs-grpc-client', DrawingCanvasElement);
+```
+
+Uses a custom **minimal gRPC-Web transport** built on the Fetch API (`src/grpc/transport.ts`) — no gRPC framework dependency needed. Protobuf encoding/decoding is handled by `protobufjs/light` with a hand-written schema (`src/proto/schema.ts`) matching the `.proto` file.
+
+Vite builds the entire app as a **single self-contained IIFE** bundle (`vue-drawing-client.js`) — no external dependencies at runtime.
+
+### Embedding in the host (`DemoApp.Server`)
+
+The `DemoApp.Server.csproj` contains two MSBuild targets that run before `Build`:
+
+1. **`PublishDrawingClientWasm`** — publishes `DrawingClient.Wasm` in Release mode and copies the output to `wwwroot/drawing-client/` (same approach as the calculator integration).
+2. **`BuildVueDrawingClient`** — runs `npm install` + `npm run build:only` in the `drawing-client-vue` directory and copies `dist/vue-drawing-client.js` to `wwwroot/vue-client/`.
+
+Both scripts are loaded in `App.razor`:
+
+```html
+<script src="drawing-client/_framework/blazor.webassembly.js"></script>
+<script src="vue-client/vue-drawing-client.js"></script>
+```
+
+Then used side-by-side on the home page:
+
+```html
+<dotnet-grpc-client service-url="https://localhost:5001"
+                    scene="landschap" width="800" height="600">
+</dotnet-grpc-client>
+
+<vuejs-grpc-client service-url="https://localhost:5001"
+                   scene="landschap" width="800" height="600">
+</vuejs-grpc-client>
+```
+
+Both elements accept the same attributes: `service-url`, `scene`, `width`, `height`, and `auto-play`.
+
+### Available scenes
+
+| Scene | Description |
+|-------|-------------|
+| 🌳 `boom` | A tree with trunk and crown |
+| 🏠 `huis` | A house with roof, windows and door |
+| ☁️ `wolk` | A fluffy cloud |
+| ☀️ `zon` | A sun with rays |
+| 🚗 `auto` | A car on the road |
+| 🏞️ `landschap` | All elements combined |
+
+---
+
+## .NET Aspire Orchestration
+
+The `CustomElements.AppHost` project orchestrates all services for local development:
+
+```csharp
+var drawingService = builder.AddProject<Projects.DrawingService_Grpc>("drawing-service");
+
+var demoApp = builder.AddProject<Projects.DemoApp_Server>("demo-app")
+    .WithExternalHttpEndpoints()
+    .WaitFor(drawingService);
+
+builder.AddProject<Projects.CalcApp_Server>("calc-app")
+    .WithExternalHttpEndpoints();
+```
+
+This ensures the gRPC drawing service is running before the demo app starts, and provides the Aspire dashboard for monitoring all services.
+
+---
+
 ## Solution Structure
 
 ```
 TestApp1.slnx
+│
+├── CustomElements.AppHost/          # .NET Aspire orchestrator
+│   └── Program.cs                   # Wires up all services
+│
+├── CustomElements.ServiceDefaults/  # Shared Aspire service defaults
+│   └── Extensions.cs
+│
+├── protos/
+│   └── drawing.proto                # Shared gRPC contract
+│
+├── DrawingService.Grpc/             # gRPC server
+│   ├── Program.cs                   # gRPC + CORS + gRPC-Web setup
+│   ├── Services/
+│   │   └── DrawingCanvasService.cs  # StreamScene + GetAvailableScenes
+│   └── SceneRenderers/
+│       ├── ISceneRenderer.cs        # Pluggable renderer interface
+│       ├── LandscapeRenderer.cs     # Composite scene
+│       ├── TreeRenderer.cs
+│       ├── HouseRenderer.cs
+│       ├── CloudRenderer.cs
+│       ├── SunRenderer.cs
+│       ├── CarRenderer.cs
+│       └── Draw.cs                  # Helper for building DrawCommand messages
+│
+├── DrawingClient.Wasm/              # Blazor WASM custom element
+│   ├── Program.cs                   # RegisterCustomElement<...>("dotnet-grpc-client")
+│   └── Components/
+│       ├── DrawingCanvas.razor      # gRPC streaming + Canvas rendering
+│       └── DrawingCanvas.razor.css  # Scoped styles
+│
+├── drawing-client-vue/              # Vue.js custom element (TypeScript)
+│   ├── package.json                 # Vue 3 + protobufjs + Vite
+│   ├── vite.config.ts               # Builds single IIFE bundle
+│   └── src/
+│       ├── main.ts                  # defineCustomElement("vuejs-grpc-client")
+│       ├── components/
+│       │   └── DrawingCanvas.ce.vue # Vue component (custom element mode)
+│       ├── canvas/
+│       │   └── renderer.ts          # Canvas 2D command executor
+│       ├── grpc/
+│       │   ├── client.ts            # Type-safe gRPC client wrapper
+│       │   └── transport.ts         # Minimal Fetch-based gRPC-Web transport
+│       └── proto/
+│           └── schema.ts            # Protobuf schema (protobufjs/light)
+│
+├── DemoApp.Server/                  # Blazor Server host for drawing demo
+│   ├── DemoApp.Server.csproj        # MSBuild targets: publish WASM + build Vue
+│   ├── Program.cs                   # MIME types, static files, Blazor Server
+│   └── Components/
+│       ├── App.razor                # Loads both client scripts
+│       ├── Layout/
+│       │   └── MainLayout.razor
+│       └── Pages/
+│           ├── Home.razor           # Side-by-side <dotnet-grpc-client> + <vuejs-grpc-client>
+│           └── Tutorial.razor       # Integration tutorial page
+│
 ├── Calculator.Wasm/
 │   ├── Calculator.Wasm.csproj       # Blazor WASM project
 │   ├── Program.cs                   # RegisterCustomElement<Calculator>("calc-ulator")
@@ -114,15 +308,15 @@ TestApp1.slnx
         │   └── NavMenu.razor
         └── Pages/
             ├── Home.razor           # <calc-ulator> usage
-            └── Integration.razor    # This guide, rendered as a page
+            └── Integration.razor    # Integration guide, rendered as a page
 ```
 
 ---
 
 ## Integration Guide
 
-A detailed in-app guide is available at `/integration` when the app is running.  
-It covers all steps, pitfalls, and code examples — generated from the actual implementation in this repo.
+A detailed in-app guide is available at `/integration` (CalcApp) and `/tutorial` (DemoApp) when the apps are running.  
+They cover all steps, pitfalls, and code examples — generated from the actual implementation in this repo.
 
 ---
 
@@ -132,6 +326,10 @@ It covers all steps, pitfalls, and code examples — generated from the actual i
 |---|---|
 | **Runtime** | .NET 10 |
 | **Framework** | ASP.NET Core 10 / Blazor |
-| **Rendering** | Blazor Server (host) + Blazor WebAssembly (component) |
-| **Custom Elements API** | `Microsoft.AspNetCore.Components.CustomElements` |
-| **Styling** | Windows 11 Fluent Design (CSS, scoped to component) |
+| **Orchestration** | .NET Aspire |
+| **Rendering** | Blazor Server (hosts) + Blazor WebAssembly + Vue.js 3 (components) |
+| **Custom Elements API** | `Microsoft.AspNetCore.Components.CustomElements` / Vue `defineCustomElement` |
+| **Communication** | gRPC-Web (server streaming) via `Grpc.Net.Client.Web` and custom Fetch transport |
+| **Protobuf** | `Google.Protobuf` + `Grpc.Tools` (.NET) / `protobufjs/light` (Vue.js) |
+| **Build** | MSBuild (WASM publish) + Vite (Vue IIFE bundle) |
+| **Styling** | Windows 11 Fluent Design (Calculator, CSS scoped) |
