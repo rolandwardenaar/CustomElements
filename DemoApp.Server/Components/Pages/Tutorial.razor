@@ -5,7 +5,8 @@
 <div class="tutorial-page">
     <h1>Integratie Tutorial</h1>
     <p class="subtitle">
-        Hoe je <code>&lt;dotnet-grpc-client&gt;</code> kunt gebruiken in je eigen projecten.
+        Hoe je <code>&lt;dotnet-grpc-client&gt;</code> en <code>&lt;vuejs-grpc-client&gt;</code>
+        kunt gebruiken in je eigen projecten.
     </p>
 
     <section class="tut-section">
@@ -87,6 +88,78 @@ client.setAttribute('scene', 'auto');</code></pre>
         <p>Gebruik dan het custom element in elke Razor pagina:</p>
         <pre><code>&lt;dotnet-grpc-client service-url="https://localhost:5001" scene="huis"&gt;
 &lt;/dotnet-grpc-client&gt;</code></pre>
+    </section>
+
+    <section class="tut-section">
+        <h2>Vue.js Client: <code>&lt;vuejs-grpc-client&gt;</code></h2>
+    </section>
+
+    <section class="tut-section">
+        <h2>7. Integratie in een HTML pagina (Vue)</h2>
+        <p>Bouw de Vue client en kopieer <code>vue-drawing-client.js</code> naar je webserver:</p>
+        <pre><code>cd drawing-client-vue
+npm install
+npm run build</code></pre>
+        <p>Voeg vervolgens toe aan je HTML pagina:</p>
+        <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;title&gt;Mijn App&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;h1&gt;Tekening via gRPC&lt;/h1&gt;
+
+    &lt;vuejs-grpc-client
+        service-url="https://mijn-server.nl:5001"
+        scene="landschap"
+        width="800"
+        height="600"&gt;
+    &lt;/vuejs-grpc-client&gt;
+
+    &lt;script src="vue-drawing-client.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+    </section>
+
+    <section class="tut-section">
+        <h2>8. HTML Attributen (Vue)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Attribuut</th>
+                    <th>Type</th>
+                    <th>Default</th>
+                    <th>Beschrijving</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><code>service-url</code></td><td>string</td><td><em>(verplicht)</em></td><td>URL van de gRPC server</td></tr>
+                <tr><td><code>scene</code></td><td>string</td><td><code>landschap</code></td><td>Naam van de scène</td></tr>
+                <tr><td><code>width</code></td><td>number</td><td><code>800</code></td><td>Canvas breedte (px)</td></tr>
+                <tr><td><code>height</code></td><td>number</td><td><code>600</code></td><td>Canvas hoogte (px)</td></tr>
+                <tr><td><code>auto-play</code></td><td>boolean</td><td><code>true</code></td><td>Automatisch tekenen bij laden</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="tut-section">
+        <h2>9. Scène wisselen via JavaScript (Vue)</h2>
+        <pre><code>const client = document.querySelector('vuejs-grpc-client');
+client.setAttribute('scene', 'auto');</code></pre>
+    </section>
+
+    <section class="tut-section">
+        <h2>10. Beide clients op één pagina</h2>
+        <p>Omdat beide clients Web Custom Elements zijn, kun je ze naast elkaar gebruiken:</p>
+        <pre><code>&lt;dotnet-grpc-client service-url="https://localhost:5001" scene="landschap"&gt;
+&lt;/dotnet-grpc-client&gt;
+
+&lt;vuejs-grpc-client service-url="https://localhost:5001" scene="landschap"&gt;
+&lt;/vuejs-grpc-client&gt;
+
+&lt;!-- Laad beide runtimes --&gt;
+&lt;script src="drawing-client/_framework/blazor.webassembly.js"&gt;&lt;/script&gt;
+&lt;script src="vue-drawing-client.js"&gt;&lt;/script&gt;</code></pre>
     </section>
 
     <section class="tut-section">

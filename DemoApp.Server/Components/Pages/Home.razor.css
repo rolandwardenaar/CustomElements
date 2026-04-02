@@ -38,6 +38,25 @@
     margin-top: 0;
 }
 
+.clients-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.client-panel {
+    background: #fafafa;
+    border-radius: 10px;
+    padding: 1rem;
+    border: 1px solid #e0e0e0;
+}
+
+.client-panel h3 {
+    margin: 0 0 0.3rem;
+    font-size: 1.1rem;
+}
+
 .demo-info h2 {
     margin-top: 0;
 }

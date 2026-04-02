@@ -94,4 +94,44 @@
     <Message Importance="High" Text="✓ DrawingClient.Wasm published to wwwroot/drawing-client/" />
   </Target>
 
+  <!--
+  ═══════════════════════════════════════════════════════════════════
+  VUE DRAWING CLIENT INTEGRATION
+  ───────────────────────────────────────────────────────────────────
+  This target builds the Vue.js drawing-client-vue project and copies
+  the resulting bundle to wwwroot/vue-client/ so that this app can
+  load the <vuejs-grpc-client> custom element.
+  ═══════════════════════════════════════════════════════════════════
+  -->
+  <Target Name="BuildVueDrawingClient"
+          BeforeTargets="Build"
+          Inputs="..\drawing-client-vue\package.json;
+                  ..\drawing-client-vue\vite.config.ts;
+                  ..\drawing-client-vue\tsconfig.json;
+                  ..\drawing-client-vue\src\main.ts;
+                  ..\drawing-client-vue\src\components\DrawingCanvas.ce.vue;
+                  ..\drawing-client-vue\src\canvas\renderer.ts;
+                  ..\drawing-client-vue\src\grpc\client.ts;
+                  ..\drawing-client-vue\src\grpc\transport.ts;
+                  ..\drawing-client-vue\src\proto\schema.ts"
+          Outputs="$(MSBuildThisFileDirectory)wwwroot\vue-client\vue-drawing-client.js">
+
+    <Message Importance="High" Text="▶ Building Vue.js drawing client..." />
+
+    <Exec Command="npm install" WorkingDirectory="$(MSBuildThisFileDirectory)..\drawing-client-vue" />
+    <Exec Command="npm run build:only" WorkingDirectory="$(MSBuildThisFileDirectory)..\drawing-client-vue" />
+
+    <MakeDir Directories="$(MSBuildThisFileDirectory)wwwroot\vue-client" />
+
+    <ItemGroup>
+      <VueDistFiles Include="$(MSBuildThisFileDirectory)..\drawing-client-vue\dist\**\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(VueDistFiles)"
+          DestinationFiles="@(VueDistFiles->'$(MSBuildThisFileDirectory)wwwroot\vue-client\%(RecursiveDir)%(Filename)%(Extension)')"
+          OverwriteReadOnlyFiles="true" />
+
+    <Message Importance="High" Text="✓ Vue drawing client built to wwwroot/vue-client/" />
+  </Target>
+
 </Project>

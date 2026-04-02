@@ -6,31 +6,41 @@
     <header class="demo-header">
         <h1>gRPC Canvas Drawing Demo</h1>
         <p>
-            De <code>&lt;dotnet-grpc-client&gt;</code> hieronder is een <strong>Blazor WebAssembly component</strong>
-            die via <strong>gRPC-Web</strong> tekencommando's ontvangt van een server en deze op een HTML5 Canvas rendert.
-            Het draait volledig in de browser als een Web Custom Element.
+            Twee <strong>Web Custom Elements</strong> die via <strong>gRPC-Web</strong> tekencommando's ontvangen
+            van een server en deze op een HTML5 Canvas renderen. Links de <strong>.NET Blazor WebAssembly</strong>
+            client, rechts de <strong>Vue.js</strong> client — dezelfde server, dezelfde tekeningen, twee
+            verschillende technologieën.
         </p>
     </header>
 
     <section class="demo-section">
-        <h2>🎨 .NET gRPC Drawing Client</h2>
-        <p class="tag-hint">
-            HTML tag: <code>&lt;dotnet-grpc-client service-url="https://localhost:5001" scene="landschap"&gt;&lt;/dotnet-grpc-client&gt;</code>
-        </p>
-
-        <!--
-            <dotnet-grpc-client> is a Web Custom Element registered by
-            the DrawingClient.Wasm Blazor WebAssembly project.
-
-            The gRPC server (DrawingService.Grpc) must be running on
-            https://localhost:5001 for the drawing to work.
-        -->
-        <dotnet-grpc-client
-            service-url="https://localhost:5001"
-            scene="landschap"
-            width="800"
-            height="600">
-        </dotnet-grpc-client>
+        <h2>🎨 Side-by-side vergelijking</h2>
+        <div class="clients-grid">
+            <div class="client-panel">
+                <h3>🟣 .NET Blazor WASM</h3>
+                <p class="tag-hint">
+                    <code>&lt;dotnet-grpc-client&gt;</code>
+                </p>
+                <dotnet-grpc-client
+                    service-url="https://localhost:5001"
+                    scene="landschap"
+                    width="800"
+                    height="600">
+                </dotnet-grpc-client>
+            </div>
+            <div class="client-panel">
+                <h3>🟢 Vue.js</h3>
+                <p class="tag-hint">
+                    <code>&lt;vuejs-grpc-client&gt;</code>
+                </p>
+                <vuejs-grpc-client
+                    service-url="https://localhost:5001"
+                    scene="landschap"
+                    width="800"
+                    height="600">
+                </vuejs-grpc-client>
+            </div>
+        </div>
     </section>
 
     <section class="demo-info">
@@ -44,9 +54,10 @@
             </div>
             <div class="info-card">
                 <div class="info-icon">🧩</div>
-                <h3>Web Custom Element</h3>
-                <p>De client is een Blazor WebAssembly component geregistreerd als
-                   <code>&lt;dotnet-grpc-client&gt;</code> — bruikbaar in elke webpagina.</p>
+                <h3>Web Custom Elements</h3>
+                <p>Beide clients zijn geregistreerd als Web Custom Elements:
+                   <code>&lt;dotnet-grpc-client&gt;</code> (Blazor WASM) en
+                   <code>&lt;vuejs-grpc-client&gt;</code> (Vue.js) — bruikbaar in elke webpagina.</p>
             </div>
             <div class="info-card">
                 <div class="info-icon">🖼️</div>
