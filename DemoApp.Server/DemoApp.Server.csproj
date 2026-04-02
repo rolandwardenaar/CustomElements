@@ -1,0 +1,97 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CustomElements.ServiceDefaults\CustomElements.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <!--
+  ═══════════════════════════════════════════════════════════════════
+  DRAWING CLIENT WASM INTEGRATION
+  ───────────────────────────────────────────────────────────────────
+  This target publishes the DrawingClient.Wasm project and copies the
+  resulting static files to wwwroot/drawing-client/ so that this app
+  can load the Blazor WebAssembly runtime and activate the
+  <dotnet-grpc-client> custom element.
+  ═══════════════════════════════════════════════════════════════════
+  -->
+  <Target Name="PublishDrawingClientWasm"
+          BeforeTargets="Build"
+          Inputs="..\DrawingClient.Wasm\DrawingClient.Wasm.csproj;
+                  ..\DrawingClient.Wasm\Program.cs;
+                  ..\DrawingClient.Wasm\Components\DrawingCanvas.razor;
+                  ..\DrawingClient.Wasm\Components\DrawingCanvas.razor.css;
+                  ..\DrawingClient.Wasm\wwwroot\js\canvas-interop.js"
+          Outputs="$(MSBuildThisFileDirectory)wwwroot\drawing-client\_framework\blazor.webassembly.js">
+
+    <Message Importance="High" Text="▶ Publishing DrawingClient.Wasm custom element..." />
+
+    <RemoveDir Directories="$(MSBuildThisFileDirectory)obj\wasm-publish" />
+    <Exec Command="dotnet publish &quot;$(MSBuildThisFileDirectory)..\DrawingClient.Wasm\DrawingClient.Wasm.csproj&quot; -c Release -o &quot;$(MSBuildThisFileDirectory)obj\wasm-publish&quot; --nologo -v quiet" />
+
+    <!-- Collect published static files, excluding pre-compressed variants -->
+    <ItemGroup>
+      <DrawingWasmStaticFiles Include="$(MSBuildThisFileDirectory)obj\wasm-publish\wwwroot\**\*"
+                              Exclude="$(MSBuildThisFileDirectory)obj\wasm-publish\wwwroot\**\*.br;
+                                       $(MSBuildThisFileDirectory)obj\wasm-publish\wwwroot\**\*.gz" />
+    </ItemGroup>
+
+    <!-- Remove stale files from previous builds -->
+    <ItemGroup>
+      <StaleDrawingFrameworkFiles Include="$(MSBuildThisFileDirectory)wwwroot\drawing-client\_framework\*" />
+    </ItemGroup>
+    <Delete Files="@(StaleDrawingFrameworkFiles)" Condition="'@(StaleDrawingFrameworkFiles)' != ''" />
+
+    <!-- Copy to wwwroot/drawing-client/ -->
+    <Copy SourceFiles="@(DrawingWasmStaticFiles)"
+          DestinationFiles="@(DrawingWasmStaticFiles->'$(MSBuildThisFileDirectory)wwwroot\drawing-client\%(RecursiveDir)%(Filename)%(Extension)')"
+          OverwriteReadOnlyFiles="true" />
+
+    <!-- Create stable-name copies of fingerprinted framework JS files -->
+    <PropertyGroup>
+      <DrawingFrameworkDir>$(MSBuildThisFileDirectory)wwwroot\drawing-client\_framework\</DrawingFrameworkDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <FpBlazorJs Include="$(DrawingFrameworkDir)blazor.webassembly.*.js"
+          Exclude="$(DrawingFrameworkDir)*.br;$(DrawingFrameworkDir)*.gz" />
+      <FpDotnetCoreJs Include="$(DrawingFrameworkDir)dotnet.*.js"
+          Exclude="$(DrawingFrameworkDir)dotnet.native.*;$(DrawingFrameworkDir)dotnet.runtime.*;$(DrawingFrameworkDir)*.br;$(DrawingFrameworkDir)*.gz" />
+      <FpDotnetNativeJs Include="$(DrawingFrameworkDir)dotnet.native.*.js"
+          Exclude="$(DrawingFrameworkDir)*.br;$(DrawingFrameworkDir)*.gz" />
+      <FpDotnetRuntimeJs Include="$(DrawingFrameworkDir)dotnet.runtime.*.js"
+          Exclude="$(DrawingFrameworkDir)*.br;$(DrawingFrameworkDir)*.gz" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(FpBlazorJs)"
+          DestinationFiles="$(DrawingFrameworkDir)blazor.webassembly.js"
+          OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="@(FpDotnetCoreJs)"
+          DestinationFiles="$(DrawingFrameworkDir)dotnet.js"
+          OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="@(FpDotnetNativeJs)"
+          DestinationFiles="$(DrawingFrameworkDir)dotnet.native.js"
+          OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="@(FpDotnetRuntimeJs)"
+          DestinationFiles="$(DrawingFrameworkDir)dotnet.runtime.js"
+          OverwriteReadOnlyFiles="true" />
+
+    <!-- Copy _content/ to wwwroot root for WASM runtime resolution -->
+    <ItemGroup>
+      <DrawingWasmContentFiles Include="$(MSBuildThisFileDirectory)obj\wasm-publish\wwwroot\_content\**\*"
+                               Exclude="$(MSBuildThisFileDirectory)obj\wasm-publish\wwwroot\_content\**\*.br;
+                                        $(MSBuildThisFileDirectory)obj\wasm-publish\wwwroot\_content\**\*.gz" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DrawingWasmContentFiles)"
+          DestinationFiles="@(DrawingWasmContentFiles->'$(MSBuildThisFileDirectory)wwwroot\_content\%(RecursiveDir)%(Filename)%(Extension)')"
+          OverwriteReadOnlyFiles="true" />
+
+    <Message Importance="High" Text="✓ DrawingClient.Wasm published to wwwroot/drawing-client/" />
+  </Target>
+
+</Project>

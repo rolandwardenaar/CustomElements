@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="13.2.1" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsAspireHost>true</IsAspireHost>
+    <!-- Prevent the AppHost from also running the MSBuild Publish targets
+         defined in CalcApp.Server and DemoApp.Server during restore/build.
+         Those targets are designed for standalone builds, not for Aspire orchestration. -->
+    <SkipPublishTargets>true</SkipPublishTargets>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DrawingService.Grpc\DrawingService.Grpc.csproj" />
+    <ProjectReference Include="..\DemoApp.Server\DemoApp.Server.csproj" />
+    <ProjectReference Include="..\CalcApp.Server\CalcApp.Server.csproj" />
+  </ItemGroup>
+
+</Project>

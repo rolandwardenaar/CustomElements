@@ -1,0 +1,194 @@
+﻿@namespace DrawingClient.Wasm.Components
+@using DrawingService.Grpc.Protos
+@using Grpc.Net.Client
+@using Grpc.Net.Client.Web
+@using Grpc.Core
+@using GrpcDrawingCanvas = DrawingService.Grpc.Protos.DrawingCanvas
+@implements IAsyncDisposable
+
+<div class="drawing-canvas-container">
+    <canvas id="@_canvasId" width="@Width" height="@Height"></canvas>
+    <div class="drawing-controls">
+        <select @bind="_selectedScene" @bind:after="OnSceneSelectedAsync">
+            @foreach (var scene in _availableScenes)
+            {
+                <option value="@scene">@scene</option>
+            }
+        </select>
+        <button @onclick="DrawSceneAsync" disabled="@_isDrawing">
+            @(_isDrawing ? "Tekenen..." : "▶ Teken")
+        </button>
+    </div>
+    @if (!string.IsNullOrEmpty(_statusMessage))
+    {
+        <div class="drawing-status">@_statusMessage</div>
+    }
+</div>
+
+@code {
+    private readonly string _canvasId = $"drawing-canvas-{Guid.NewGuid():N}";
+    private IJSObjectReference? _jsModule;
+    private GrpcChannel? _channel;
+    private GrpcDrawingCanvas.DrawingCanvasClient? _grpcClient;
+    private List<string> _availableScenes = [];
+    private string _selectedScene = "landschap";
+    private bool _isDrawing;
+    private string? _statusMessage;
+
+    /// <summary>URL of the gRPC server.</summary>
+    [Parameter] public string ServiceUrl { get; set; } = "";
+
+    /// <summary>Initial scene to draw.</summary>
+    [Parameter] public string Scene { get; set; } = "landschap";
+
+    /// <summary>Canvas width in pixels.</summary>
+    [Parameter] public int Width { get; set; } = 800;
+
+    /// <summary>Canvas height in pixels.</summary>
+    [Parameter] public int Height { get; set; } = 600;
+
+    /// <summary>Whether to start drawing automatically on load.</summary>
+    [Parameter] public bool AutoPlay { get; set; } = true;
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        _jsModule = await JS.InvokeAsync<IJSObjectReference>(
+            "import", "./drawing-client/js/canvas-interop.js");
+
+        if (string.IsNullOrWhiteSpace(ServiceUrl))
+        {
+            _statusMessage = "⚠ Geen service-url opgegeven.";
+            StateHasChanged();
+            return;
+        }
+
+        InitGrpcClient();
+        await LoadAvailableScenesAsync();
+
+        _selectedScene = Scene;
+
+        if (AutoPlay)
+        {
+            await DrawSceneAsync();
+        }
+    }
+
+    private void InitGrpcClient()
+    {
+        var handler = new GrpcWebHandler(GrpcWebMode.GrpcWeb, new HttpClientHandler());
+        _channel = GrpcChannel.ForAddress(ServiceUrl, new GrpcChannelOptions
+        {
+            HttpHandler = handler
+        });
+        _grpcClient = new GrpcDrawingCanvas.DrawingCanvasClient(_channel);
+    }
+
+    private async Task LoadAvailableScenesAsync()
+    {
+        if (_grpcClient is null)
+            return;
+
+        try
+        {
+            var response = await _grpcClient.GetAvailableScenesAsync(new Empty());
+            _availableScenes = [.. response.SceneNames];
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Fout bij laden scènes: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnSceneSelectedAsync()
+    {
+        if (AutoPlay)
+            await DrawSceneAsync();
+    }
+
+    private async Task DrawSceneAsync()
+    {
+        if (_grpcClient is null || _jsModule is null || _isDrawing)
+            return;
+
+        _isDrawing = true;
+        _statusMessage = $"Tekenen: {_selectedScene}...";
+        StateHasChanged();
+
+        try
+        {
+            // Clear canvas first
+            await _jsModule.InvokeVoidAsync("clearCanvas", _canvasId);
+
+            var request = new SceneRequest { SceneName = _selectedScene };
+            using var call = _grpcClient.StreamScene(request);
+
+            // Batch commands for performance — flush every N commands
+            var batch = new List<object>(32);
+            const int batchSize = 20;
+
+            await foreach (var command in call.ResponseStream.ReadAllAsync())
+            {
+                batch.Add(MapToJsCommand(command));
+
+                if (batch.Count >= batchSize)
+                {
+                    await _jsModule.InvokeVoidAsync("executeDrawCommands", _canvasId, batch.ToArray());
+                    batch.Clear();
+                    StateHasChanged();
+                }
+            }
+
+            // Flush remaining commands
+            if (batch.Count > 0)
+            {
+                await _jsModule.InvokeVoidAsync("executeDrawCommands", _canvasId, batch.ToArray());
+            }
+
+            _statusMessage = $"✓ {_selectedScene} voltooid";
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Fout: {ex.Message}";
+        }
+        finally
+        {
+            _isDrawing = false;
+            StateHasChanged();
+        }
+    }
+
+    private static object MapToJsCommand(DrawCommand command) => command.CommandCase switch
+    {
+        DrawCommand.CommandOneofCase.ClearCanvas => new { type = "clearCanvas", command.ClearCanvas.Width, command.ClearCanvas.Height },
+        DrawCommand.CommandOneofCase.SetColor => new { type = "setColor", command.SetColor.Color },
+        DrawCommand.CommandOneofCase.SetStrokeColor => new { type = "setStrokeColor", command.SetStrokeColor.Color },
+        DrawCommand.CommandOneofCase.SetLineWidth => new { type = "setLineWidth", command.SetLineWidth.Width },
+        DrawCommand.CommandOneofCase.FillRect => new { type = "fillRect", command.FillRect.X, command.FillRect.Y, command.FillRect.Width, command.FillRect.Height },
+        DrawCommand.CommandOneofCase.BeginPath => new { type = (string)"beginPath" },
+        DrawCommand.CommandOneofCase.ClosePath => new { type = (string)"closePath" },
+        DrawCommand.CommandOneofCase.MoveTo => new { type = "moveTo", command.MoveTo.X, command.MoveTo.Y },
+        DrawCommand.CommandOneofCase.LineTo => new { type = "lineTo", command.LineTo.X, command.LineTo.Y },
+        DrawCommand.CommandOneofCase.Arc => new { type = "arc", command.Arc.X, command.Arc.Y, command.Arc.Radius, command.Arc.StartAngle, command.Arc.EndAngle },
+        DrawCommand.CommandOneofCase.Fill => new { type = (string)"fill" },
+        DrawCommand.CommandOneofCase.Stroke => new { type = (string)"stroke" },
+        DrawCommand.CommandOneofCase.QuadraticCurveTo => new { type = "quadraticCurveTo", command.QuadraticCurveTo.Cpx, command.QuadraticCurveTo.Cpy, command.QuadraticCurveTo.X, command.QuadraticCurveTo.Y },
+        DrawCommand.CommandOneofCase.BezierCurveTo => new { type = "bezierCurveTo", command.BezierCurveTo.Cp1X, command.BezierCurveTo.Cp1Y, command.BezierCurveTo.Cp2X, command.BezierCurveTo.Cp2Y, command.BezierCurveTo.X, command.BezierCurveTo.Y },
+        _ => new { type = "unknown" }
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule is not null)
+        {
+            await _jsModule.DisposeAsync();
+        }
+        _channel?.Dispose();
+    }
+}

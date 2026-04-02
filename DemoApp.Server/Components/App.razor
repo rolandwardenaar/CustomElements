@@ -1,0 +1,40 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <ResourcePreloader />
+
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link rel="stylesheet" href="@Assets["DemoApp.Server.styles.css"]" />
+    <!-- Scoped component styles from the DrawingClient.Wasm bundle -->
+    <link rel="stylesheet" href="drawing-client/DrawingClient.Wasm.styles.css" />
+    <ImportMap />
+    <HeadOutlet />
+</head>
+
+<body>
+    <Routes />
+
+    <!-- Blazor Server runtime -->
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+
+    <!--
+    ═══════════════════════════════════════════════════════════════
+    DRAWING CLIENT WASM INTEGRATION
+    ───────────────────────────────────────────────────────────────
+    This script loads the Blazor WebAssembly runtime from the
+    published DrawingClient.Wasm bundle (wwwroot/drawing-client/).
+
+    The WASM runtime registers <dotnet-grpc-client> as a Web Custom
+    Element.  Once loaded, any <dotnet-grpc-client> tag on the page
+    becomes a fully functional, self-contained Blazor component
+    running in the browser via WebAssembly.
+    ═══════════════════════════════════════════════════════════════
+    -->
+    <script src="drawing-client/_framework/blazor.webassembly.js"></script>
+</body>
+
+</html>

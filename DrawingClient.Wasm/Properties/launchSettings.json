@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "DrawingClient.Wasm": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:10869;http://localhost:10870"
+    }
+  }
+}

@@ -1,0 +1,71 @@
+﻿@page "/"
+
+<PageTitle>gRPC Drawing Demo</PageTitle>
+
+<div class="demo-page">
+    <header class="demo-header">
+        <h1>gRPC Canvas Drawing Demo</h1>
+        <p>
+            De <code>&lt;dotnet-grpc-client&gt;</code> hieronder is een <strong>Blazor WebAssembly component</strong>
+            die via <strong>gRPC-Web</strong> tekencommando's ontvangt van een server en deze op een HTML5 Canvas rendert.
+            Het draait volledig in de browser als een Web Custom Element.
+        </p>
+    </header>
+
+    <section class="demo-section">
+        <h2>🎨 .NET gRPC Drawing Client</h2>
+        <p class="tag-hint">
+            HTML tag: <code>&lt;dotnet-grpc-client service-url="https://localhost:5001" scene="landschap"&gt;&lt;/dotnet-grpc-client&gt;</code>
+        </p>
+
+        <!--
+            <dotnet-grpc-client> is a Web Custom Element registered by
+            the DrawingClient.Wasm Blazor WebAssembly project.
+
+            The gRPC server (DrawingService.Grpc) must be running on
+            https://localhost:5001 for the drawing to work.
+        -->
+        <dotnet-grpc-client
+            service-url="https://localhost:5001"
+            scene="landschap"
+            width="800"
+            height="600">
+        </dotnet-grpc-client>
+    </section>
+
+    <section class="demo-info">
+        <h2>Hoe werkt het?</h2>
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="info-icon">📡</div>
+                <h3>gRPC Server Streaming</h3>
+                <p>De server stuurt tekencommando's één voor één via gRPC-Web server streaming.
+                   Elk commando komt overeen met een Canvas 2D API call.</p>
+            </div>
+            <div class="info-card">
+                <div class="info-icon">🧩</div>
+                <h3>Web Custom Element</h3>
+                <p>De client is een Blazor WebAssembly component geregistreerd als
+                   <code>&lt;dotnet-grpc-client&gt;</code> — bruikbaar in elke webpagina.</p>
+            </div>
+            <div class="info-card">
+                <div class="info-icon">🖼️</div>
+                <h3>Canvas Rendering</h3>
+                <p>Commando's worden gebatched en via JS Interop naar de Canvas 2D API gestuurd
+                   voor efficiënte rendering.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="demo-info">
+        <h2>Beschikbare scènes</h2>
+        <div class="scene-grid">
+            <div class="scene-card">🌳 <strong>boom</strong> — Een boom met stam en kroon</div>
+            <div class="scene-card">🏠 <strong>huis</strong> — Een huis met dak, ramen en deur</div>
+            <div class="scene-card">☁️ <strong>wolk</strong> — Een pluizige wolk</div>
+            <div class="scene-card">☀️ <strong>zon</strong> — Een zon met stralen</div>
+            <div class="scene-card">🚗 <strong>auto</strong> — Een auto op de weg</div>
+            <div class="scene-card">🏞️ <strong>landschap</strong> — Alle elementen gecombineerd</div>
+        </div>
+    </section>
+</div>

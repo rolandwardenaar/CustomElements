@@ -1,0 +1,70 @@
+﻿*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #f5f7fa;
+    color: #1a1a2e;
+}
+
+.page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.8rem 2rem;
+    background: #1a1a2e;
+    color: #fff;
+}
+
+.top-bar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.brand-icon {
+    font-size: 1.4rem;
+}
+
+.brand-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.top-bar-links {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.top-bar-links a, .top-bar-links ::deep a {
+    color: #b0b8c8;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.top-bar-links a:hover, .top-bar-links ::deep a:hover {
+    color: #fff;
+}
+
+.top-bar-links ::deep a.active {
+    color: #fff;
+    border-bottom: 2px solid #4fc3f7;
+}
+
+.content {
+    flex: 1;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}

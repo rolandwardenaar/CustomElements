@@ -1,0 +1,54 @@
+﻿.drawing-canvas-container {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+canvas {
+    border: 2px solid #333;
+    border-radius: 8px;
+    background: #f0f8ff;
+}
+
+.drawing-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.drawing-controls select {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: #fff;
+    text-transform: capitalize;
+}
+
+.drawing-controls button {
+    padding: 0.4rem 1rem;
+    border: none;
+    border-radius: 6px;
+    background: #228B22;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.drawing-controls button:hover:not(:disabled) {
+    background: #1a6b1a;
+}
+
+.drawing-controls button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.drawing-status {
+    font-size: 0.8rem;
+    color: #666;
+    padding: 0.2rem 0;
+}

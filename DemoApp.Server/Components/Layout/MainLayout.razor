@@ -1,0 +1,20 @@
+﻿@inherits LayoutComponentBase
+
+<div class="page">
+    <main>
+        <nav class="top-bar">
+            <div class="top-bar-brand">
+                <span class="brand-icon">🎨</span>
+                <span class="brand-text">gRPC Drawing Demo</span>
+            </div>
+            <div class="top-bar-links">
+                <NavLink href="/" Match="NavLinkMatch.All">Home</NavLink>
+                <NavLink href="/tutorial">Tutorial</NavLink>
+            </div>
+        </nav>
+
+        <article class="content">
+            @Body
+        </article>
+    </main>
+</div>

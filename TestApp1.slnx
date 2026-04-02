@@ -1,4 +1,16 @@
 <Solution>
+  <Folder Name="/docs/">
+    <File Path="requirements.md" />
+    <File Path="docs/development-plan.md" />
+  </Folder>
+  <Folder Name="/protos/">
+    <File Path="protos/drawing.proto" />
+  </Folder>
   <Project Path="CalcApp.Server/CalcApp.Server.csproj" />
   <Project Path="Calculator.Wasm/Calculator.Wasm.csproj" />
+  <Project Path="DrawingService.Grpc/DrawingService.Grpc.csproj" />
+  <Project Path="DrawingClient.Wasm/DrawingClient.Wasm.csproj" />
+  <Project Path="DemoApp.Server/DemoApp.Server.csproj" />
+  <Project Path="CustomElements.ServiceDefaults/CustomElements.ServiceDefaults.csproj" />
+  <Project Path="CustomElements.AppHost/CustomElements.AppHost.csproj" />
 </Solution>

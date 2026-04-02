@@ -1,0 +1,107 @@
+﻿syntax = "proto3";
+
+package drawing;
+
+option csharp_namespace = "DrawingService.Grpc.Protos";
+
+// Drawing canvas service — streams draw commands to clients.
+service DrawingCanvas {
+  // Stream all draw commands for a named scene.
+  rpc StreamScene (SceneRequest) returns (stream DrawCommand);
+
+  // List available scene names.
+  rpc GetAvailableScenes (Empty) returns (SceneList);
+}
+
+message Empty {}
+
+message SceneRequest {
+  string scene_name = 1;
+}
+
+message SceneList {
+  repeated string scene_names = 1;
+}
+
+// A single draw command targeting the HTML5 Canvas 2D API.
+message DrawCommand {
+  oneof command {
+    SetColor set_color = 1;
+    MoveTo move_to = 2;
+    LineTo line_to = 3;
+    FillRect fill_rect = 4;
+    Arc arc = 5;
+    BeginPath begin_path = 6;
+    ClosePath close_path = 7;
+    Fill fill = 8;
+    Stroke stroke = 9;
+    SetLineWidth set_line_width = 10;
+    ClearCanvas clear_canvas = 11;
+    QuadraticCurveTo quadratic_curve_to = 12;
+    BezierCurveTo bezier_curve_to = 13;
+    SetStrokeColor set_stroke_color = 14;
+  }
+}
+
+message SetColor {
+  string color = 1;
+}
+
+message SetStrokeColor {
+  string color = 1;
+}
+
+message MoveTo {
+  double x = 1;
+  double y = 2;
+}
+
+message LineTo {
+  double x = 1;
+  double y = 2;
+}
+
+message FillRect {
+  double x = 1;
+  double y = 2;
+  double width = 3;
+  double height = 4;
+}
+
+message Arc {
+  double x = 1;
+  double y = 2;
+  double radius = 3;
+  double start_angle = 4;
+  double end_angle = 5;
+}
+
+message BeginPath {}
+message ClosePath {}
+message Fill {}
+message Stroke {}
+
+message SetLineWidth {
+  double width = 1;
+}
+
+message ClearCanvas {
+  double width = 1;
+  double height = 2;
+}
+
+message QuadraticCurveTo {
+  double cpx = 1;
+  double cpy = 2;
+  double x = 3;
+  double y = 4;
+}
+
+message BezierCurveTo {
+  double cp1x = 1;
+  double cp1y = 2;
+  double cp2x = 3;
+  double cp2y = 4;
+  double x = 5;
+  double y = 6;
+}

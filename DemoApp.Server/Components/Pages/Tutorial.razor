@@ -1,0 +1,103 @@
+﻿@page "/tutorial"
+
+<PageTitle>Integration Tutorial</PageTitle>
+
+<div class="tutorial-page">
+    <h1>Integratie Tutorial</h1>
+    <p class="subtitle">
+        Hoe je <code>&lt;dotnet-grpc-client&gt;</code> kunt gebruiken in je eigen projecten.
+    </p>
+
+    <section class="tut-section">
+        <h2>1. Vereisten</h2>
+        <ul>
+            <li>.NET 10 SDK</li>
+            <li>De <strong>DrawingService.Grpc</strong> server draaiend op <code>https://localhost:5001</code></li>
+            <li>De gepubliceerde <strong>DrawingClient.Wasm</strong> bestanden</li>
+        </ul>
+    </section>
+
+    <section class="tut-section">
+        <h2>2. gRPC Server starten</h2>
+        <pre><code>cd DrawingService.Grpc
+dotnet run</code></pre>
+        <p>De server start op <code>https://localhost:5001</code> en biedt gRPC-Web endpoints.</p>
+    </section>
+
+    <section class="tut-section">
+        <h2>3. Integratie in een HTML pagina</h2>
+        <p>Kopieer de gepubliceerde <code>drawing-client/</code> map naar je webserver en voeg toe:</p>
+        <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;title&gt;Mijn App&lt;/title&gt;
+    &lt;link rel="stylesheet" href="drawing-client/DrawingClient.Wasm.styles.css" /&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;h1&gt;Tekening via gRPC&lt;/h1&gt;
+
+    &lt;dotnet-grpc-client
+        service-url="https://mijn-server.nl:5001"
+        scene="landschap"
+        width="800"
+        height="600"&gt;
+    &lt;/dotnet-grpc-client&gt;
+
+    &lt;script src="drawing-client/_framework/blazor.webassembly.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+    </section>
+
+    <section class="tut-section">
+        <h2>4. HTML Attributen</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Attribuut</th>
+                    <th>Type</th>
+                    <th>Default</th>
+                    <th>Beschrijving</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><code>service-url</code></td><td>string</td><td><em>(verplicht)</em></td><td>URL van de gRPC server</td></tr>
+                <tr><td><code>scene</code></td><td>string</td><td><code>landschap</code></td><td>Naam van de scène</td></tr>
+                <tr><td><code>width</code></td><td>number</td><td><code>800</code></td><td>Canvas breedte (px)</td></tr>
+                <tr><td><code>height</code></td><td>number</td><td><code>600</code></td><td>Canvas hoogte (px)</td></tr>
+                <tr><td><code>auto-play</code></td><td>boolean</td><td><code>true</code></td><td>Automatisch tekenen bij laden</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="tut-section">
+        <h2>5. Scène wisselen via JavaScript</h2>
+        <pre><code>// Wijzig de scène dynamisch
+const client = document.querySelector('dotnet-grpc-client');
+client.setAttribute('scene', 'auto');</code></pre>
+    </section>
+
+    <section class="tut-section">
+        <h2>6. Integratie in Blazor Server</h2>
+        <p>Voeg het volgende toe aan je <code>App.razor</code>:</p>
+        <pre><code>&lt;!-- In &lt;head&gt; --&gt;
+&lt;link rel="stylesheet" href="drawing-client/DrawingClient.Wasm.styles.css" /&gt;
+
+&lt;!-- Voor &lt;/body&gt; --&gt;
+&lt;script src="drawing-client/_framework/blazor.webassembly.js"&gt;&lt;/script&gt;</code></pre>
+        <p>Gebruik dan het custom element in elke Razor pagina:</p>
+        <pre><code>&lt;dotnet-grpc-client service-url="https://localhost:5001" scene="huis"&gt;
+&lt;/dotnet-grpc-client&gt;</code></pre>
+    </section>
+
+    <section class="tut-section">
+        <h2>7. Beschikbare scènes</h2>
+        <div class="scene-list">
+            <span class="scene-tag">🌳 boom</span>
+            <span class="scene-tag">🏠 huis</span>
+            <span class="scene-tag">☁️ wolk</span>
+            <span class="scene-tag">☀️ zon</span>
+            <span class="scene-tag">🚗 auto</span>
+            <span class="scene-tag">🏞️ landschap</span>
+        </div>
+    </section>
+</div>
