@@ -48,6 +48,56 @@ The Aspire dashboard opens automatically and shows all services. The demo app is
 
 ---
 
+## Building Custom Elements (PowerShell)
+
+For scenarios where you want to build the WebAssembly custom elements **without triggering a full MSBuild**, use the `Build-CustomElements.ps1` script. This is useful for:
+
+- CI/CD pipelines that need explicit build steps
+- Development workflows where you want to rebuild only the WASM components
+- Debugging build issues in isolation
+
+### Usage
+
+```powershell
+# Build all custom elements (Calculator + DrawingClient)
+.\Build-CustomElements.ps1
+
+# Build only the Calculator custom element
+.\Build-CustomElements.ps1 -Project Calculator
+
+# Build only the DrawingClient custom element
+.\Build-CustomElements.ps1 -Project DrawingClient
+
+# Build with verbose output to see all file operations
+.\Build-CustomElements.ps1 -Verbose
+
+# Build in Debug configuration (default is Release)
+.\Build-CustomElements.ps1 -Configuration Debug
+```
+
+### What the script does
+
+The script performs the same steps as the MSBuild targets in the `.csproj` files:
+
+1. **Publishes** the WASM project (`dotnet publish -c Release`)
+2. **Cleans** stale framework files from previous builds
+3. **Copies** static files to the server's `wwwroot/` directory (excluding `.br`/`.gz` pre-compressed files)
+4. **Creates stable-name copies** of fingerprinted JS files:
+   - `blazor.webassembly.HASH.js` → `blazor.webassembly.js`
+   - `dotnet.HASH.js` → `dotnet.js`
+   - `dotnet.native.HASH.js` → `dotnet.native.js`
+   - `dotnet.runtime.HASH.js` → `dotnet.runtime.js`
+5. **Copies** `_content/` files to the server's wwwroot root for WASM runtime resolution
+
+### Output locations
+
+| Project | Published to |
+|---------|--------------|
+| `Calculator.Wasm` | `CalcApp.Server/wwwroot/calculator/` |
+| `DrawingClient.Wasm` | `DemoApp.Server/wwwroot/drawing-client/` |
+
+---
+
 ## How It Works — Calculator (`<calc-ulator>`)
 
 ### 1. Register the component as a Custom Element
