@@ -143,7 +143,7 @@ export default defineComponent({
 
 <style>
 .drawing-canvas-container {
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
   gap: 0.5rem;
   font-family: 'Segoe UI', system-ui, sans-serif;
@@ -153,6 +153,8 @@ canvas {
   border: 2px solid #333;
   border-radius: 8px;
   background: #f0f8ff;
+  max-width: 100%;
+  height: auto;
 }
 
 .drawing-controls {
